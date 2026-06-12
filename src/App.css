@@ -198,6 +198,10 @@ input::placeholder {
   color: #7a8493;
 }
 
+#support-amount::placeholder {
+  font-size: 14px;
+}
+
 .field-error {
   min-height: 20px;
   margin: 0;
