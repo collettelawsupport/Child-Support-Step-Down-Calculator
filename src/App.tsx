@@ -140,7 +140,7 @@ export default function App() {
                     name="support-amount"
                     inputMode="decimal"
                     autoComplete="off"
-                    placeholder="670.30"
+                    placeholder="Enter Starting Child Support Amount"
                     value={amountInput}
                     onChange={(event) => {
                       setAmountInput(event.target.value);
@@ -165,7 +165,7 @@ export default function App() {
                     name="support-percentage"
                     inputMode="decimal"
                     autoComplete="off"
-                    placeholder="30%"
+                    placeholder="Starting Percentage"
                     value={percentageInput}
                     onChange={(event) => {
                       setPercentageInput(event.target.value);
