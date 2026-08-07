@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateProjectedAnnualIncome,
   calculateStepDownAmounts,
   formatCurrency,
   normalizePercentageInput,
+  parseDateInput,
   parseCurrencyInput
 } from "./calculator";
 
@@ -33,5 +35,38 @@ describe("calculator helpers", () => {
       "$446.87"
     );
     expect(result.rows.find((row) => row.percentage === 30)!.isCurrent).toBe(true);
+  });
+
+  it("parses valid date inputs and rejects invalid dates", () => {
+    expect(parseDateInput("2026-07-01")).toMatchObject({
+      year: 2026,
+      month: 7,
+      day: 1
+    });
+    expect(parseDateInput("7/1/2026")).toMatchObject({
+      year: 2026,
+      month: 7,
+      day: 1
+    });
+    expect(parseDateInput("2026-02-31")).toBeNull();
+    expect(parseDateInput("13/01/2026")).toBeNull();
+  });
+
+  it("projects year-to-date income linearly through the paystub date", () => {
+    const result = calculateProjectedAnnualIncome(50000, "2026-07-01");
+
+    expect(result).not.toBeNull();
+    expect(result!.elapsedDays).toBe(182);
+    expect(result!.daysInYear).toBe(365);
+    expect(result!.projectedIncome).toBeCloseTo(100274.725, 3);
+  });
+
+  it("uses leap-year day counts for income projections", () => {
+    const result = calculateProjectedAnnualIncome(10000, "2024-02-29");
+
+    expect(result).not.toBeNull();
+    expect(result!.elapsedDays).toBe(60);
+    expect(result!.daysInYear).toBe(366);
+    expect(formatCurrency(result!.projectedIncome)).toBe("$61,000.00");
   });
 });

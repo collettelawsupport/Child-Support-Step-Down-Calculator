@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import logoUrl from "./assets/collette-law-logo.png";
 import {
+  calculateProjectedAnnualIncome,
   calculateStepDownAmounts,
+  formatDateParts,
   formatCurrency,
   formatPercentage,
   normalizePercentageInput,
   parseCurrencyInput,
-  type CalculationResult
+  type CalculationResult,
+  type IncomeProjectionResult
 } from "./calculator";
 
 type ValidationState = {
@@ -15,6 +18,13 @@ type ValidationState = {
   amountError: string;
   percentageError: string;
   result: CalculationResult | null;
+};
+
+type ProjectionValidationState = {
+  ytdIncome: number | null;
+  ytdIncomeError: string;
+  paystubDateError: string;
+  result: IncomeProjectionResult | null;
 };
 
 function validateInputs(amountInput: string, percentageInput: string): ValidationState {
@@ -51,6 +61,41 @@ function validateInputs(amountInput: string, percentageInput: string): Validatio
   };
 }
 
+function validateProjectionInputs(
+  ytdIncomeInput: string,
+  paystubDateInput: string
+): ProjectionValidationState {
+  const ytdIncome = parseCurrencyInput(ytdIncomeInput);
+  let ytdIncomeError = "";
+  let paystubDateError = "";
+
+  if (!ytdIncomeInput.trim()) {
+    ytdIncomeError = "Enter the year-to-date income.";
+  } else if (ytdIncome === null || ytdIncome <= 0) {
+    ytdIncomeError = "Enter a valid income greater than $0.00.";
+  }
+
+  if (!paystubDateInput.trim()) {
+    paystubDateError = "Enter the date as of the paystub.";
+  }
+
+  const result =
+    !ytdIncomeError && !paystubDateError && ytdIncome !== null
+      ? calculateProjectedAnnualIncome(ytdIncome, paystubDateInput)
+      : null;
+
+  if (!paystubDateError && !result) {
+    paystubDateError = "Enter a valid paystub date.";
+  }
+
+  return {
+    ytdIncome,
+    ytdIncomeError,
+    paystubDateError,
+    result
+  };
+}
+
 function buildCopyText(
   amount: number,
   percentage: number,
@@ -76,16 +121,29 @@ function buildCopyText(
 export default function App() {
   const [amountInput, setAmountInput] = useState("");
   const [percentageInput, setPercentageInput] = useState("");
+  const [ytdIncomeInput, setYtdIncomeInput] = useState("");
+  const [paystubDateInput, setPaystubDateInput] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
 
   const validation = useMemo(
     () => validateInputs(amountInput, percentageInput),
     [amountInput, percentageInput]
   );
+  const projectionValidation = useMemo(
+    () => validateProjectionInputs(ytdIncomeInput, paystubDateInput),
+    [ytdIncomeInput, paystubDateInput]
+  );
 
   const hasEnteredData = amountInput.trim() || percentageInput.trim();
+  const hasEnteredProjectionData = ytdIncomeInput.trim() || paystubDateInput.trim();
   const showAmountError = Boolean(hasEnteredData && validation.amountError);
   const showPercentageError = Boolean(hasEnteredData && validation.percentageError);
+  const showYtdIncomeError = Boolean(
+    hasEnteredProjectionData && projectionValidation.ytdIncomeError
+  );
+  const showPaystubDateError = Boolean(
+    hasEnteredProjectionData && projectionValidation.paystubDateError
+  );
   const canCopy =
     validation.result !== null && validation.amount !== null && validation.percentage !== null;
 
@@ -108,6 +166,11 @@ export default function App() {
     setAmountInput("");
     setPercentageInput("");
     setCopyStatus("");
+  }
+
+  function handleClearProjection() {
+    setYtdIncomeInput("");
+    setPaystubDateInput("");
   }
 
   return (
@@ -258,6 +321,106 @@ export default function App() {
               Valid results will appear here automatically.
             </div>
           )}
+        </section>
+
+        <section className="card projection-card" aria-labelledby="projection-heading">
+          <div className="results-header projection-header">
+            <div>
+              <p className="section-kicker">Income projection</p>
+              <h2 id="projection-heading">Year-to-date income projection</h2>
+            </div>
+            <p className="legal-note">
+              Assumes income is earned evenly from January 1 through the paystub date.
+            </p>
+          </div>
+
+          <form className="projection-body" noValidate>
+            <fieldset className="projection-fieldset">
+              <legend className="sr-only">Year-to-date income information</legend>
+
+              <div className="field-grid projection-field-grid">
+                <div className="form-field">
+                  <label htmlFor="ytd-income">Year-to-date income</label>
+                  <div className={`input-wrap ${showYtdIncomeError ? "input-error" : ""}`}>
+                    <span aria-hidden="true">$</span>
+                    <input
+                      id="ytd-income"
+                      name="ytd-income"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      placeholder="Enter Year to Date Income"
+                      value={ytdIncomeInput}
+                      onChange={(event) => setYtdIncomeInput(event.target.value)}
+                      aria-invalid={showYtdIncomeError}
+                      aria-describedby={showYtdIncomeError ? "ytd-income-error" : undefined}
+                    />
+                  </div>
+                  {showYtdIncomeError ? (
+                    <p className="field-error" id="ytd-income-error">
+                      {projectionValidation.ytdIncomeError}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="form-field">
+                  <label htmlFor="paystub-date">Date as of paystub</label>
+                  <div className={`input-wrap ${showPaystubDateError ? "input-error" : ""}`}>
+                    <input
+                      id="paystub-date"
+                      name="paystub-date"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="MM/DD/YYYY"
+                      value={paystubDateInput}
+                      onChange={(event) => setPaystubDateInput(event.target.value)}
+                      aria-invalid={showPaystubDateError}
+                      aria-describedby={
+                        showPaystubDateError ? "paystub-date-error" : undefined
+                      }
+                    />
+                  </div>
+                  {showPaystubDateError ? (
+                    <p className="field-error" id="paystub-date-error">
+                      {projectionValidation.paystubDateError}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="actions">
+                <button type="button" className="secondary-button" onClick={handleClearProjection}>
+                  Clear projection
+                </button>
+              </div>
+            </fieldset>
+
+            <section className="projection-output" aria-labelledby="projected-income-heading">
+              <p className="section-kicker">Projected income</p>
+              <h3 id="projected-income-heading">Annualized income</h3>
+              {projectionValidation.result ? (
+                <>
+                  <p className="projection-value">
+                    {formatCurrency(projectionValidation.result.projectedIncome)}
+                  </p>
+                  <p className="muted">
+                    Based on {formatCurrency(projectionValidation.ytdIncome ?? 0)} through{" "}
+                    {formatDateParts(projectionValidation.result.paystubDate)}.
+                  </p>
+                  <p className="projection-detail">
+                    Day {projectionValidation.result.elapsedDays} of{" "}
+                    {projectionValidation.result.daysInYear} in{" "}
+                    {projectionValidation.result.paystubYear}.
+                  </p>
+                </>
+              ) : (
+                <p className="empty-state">
+                  {hasEnteredProjectionData
+                    ? "Fix the highlighted fields to project annual income."
+                    : "Enter year-to-date income and a paystub date to project annual income."}
+                </p>
+              )}
+            </section>
+          </form>
         </section>
       </main>
     </>

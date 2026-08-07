@@ -13,6 +13,21 @@ export type CalculationResult = {
   rows: SupportRow[];
 };
 
+export type DateParts = {
+  year: number;
+  month: number;
+  day: number;
+  date: Date;
+};
+
+export type IncomeProjectionResult = {
+  projectedIncome: number;
+  elapsedDays: number;
+  daysInYear: number;
+  paystubYear: number;
+  paystubDate: DateParts;
+};
+
 const numberPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)$/;
 
 export function parseCurrencyInput(input: string): number | null {
@@ -69,6 +84,64 @@ export function calculateStepDownAmounts(
   };
 }
 
+export function parseDateInput(input: string): DateParts | null {
+  const cleaned = input.trim();
+  const isoMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const slashMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (!isoMatch && !slashMatch) {
+    return null;
+  }
+
+  const year = Number(isoMatch ? isoMatch[1] : slashMatch?.[3]);
+  const month = Number(isoMatch ? isoMatch[2] : slashMatch?.[1]);
+  const day = Number(isoMatch ? isoMatch[3] : slashMatch?.[2]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day, date };
+}
+
+export function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+export function getDayOfYear(dateParts: DateParts): number {
+  const startOfYear = Date.UTC(dateParts.year, 0, 1);
+  const currentDate = Date.UTC(dateParts.year, dateParts.month - 1, dateParts.day);
+
+  return Math.floor((currentDate - startOfYear) / 86_400_000) + 1;
+}
+
+export function calculateProjectedAnnualIncome(
+  ytdIncome: number,
+  paystubDateInput: string
+): IncomeProjectionResult | null {
+  const paystubDate = parseDateInput(paystubDateInput);
+
+  if (!paystubDate) {
+    return null;
+  }
+
+  const daysInYear = isLeapYear(paystubDate.year) ? 366 : 365;
+  const elapsedDays = getDayOfYear(paystubDate);
+
+  return {
+    projectedIncome: ytdIncome * (daysInYear / elapsedDays),
+    elapsedDays,
+    daysInYear,
+    paystubYear: paystubDate.year,
+    paystubDate
+  };
+}
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -80,4 +153,12 @@ export function formatCurrency(amount: number): string {
 
 export function formatPercentage(percentage: number): string {
   return `${Math.round(percentage)}%`;
+}
+
+export function formatDateParts(dateParts: DateParts): string {
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  }).format(dateParts.date);
 }
