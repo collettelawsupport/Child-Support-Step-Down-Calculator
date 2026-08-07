@@ -88,14 +88,15 @@ export function parseDateInput(input: string): DateParts | null {
   const cleaned = input.trim();
   const isoMatch = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const slashMatch = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const numericMatch = cleaned.match(/^(\d{2})(\d{2})(\d{4})$/);
 
-  if (!isoMatch && !slashMatch) {
+  if (!isoMatch && !slashMatch && !numericMatch) {
     return null;
   }
 
-  const year = Number(isoMatch ? isoMatch[1] : slashMatch?.[3]);
-  const month = Number(isoMatch ? isoMatch[2] : slashMatch?.[1]);
-  const day = Number(isoMatch ? isoMatch[3] : slashMatch?.[2]);
+  const year = Number(isoMatch ? isoMatch[1] : slashMatch ? slashMatch[3] : numericMatch?.[3]);
+  const month = Number(isoMatch ? isoMatch[2] : slashMatch ? slashMatch[1] : numericMatch?.[1]);
+  const day = Number(isoMatch ? isoMatch[3] : slashMatch ? slashMatch[2] : numericMatch?.[2]);
   const date = new Date(year, month - 1, day);
 
   if (
@@ -107,6 +108,29 @@ export function parseDateInput(input: string): DateParts | null {
   }
 
   return { year, month, day, date };
+}
+
+export function formatPaystubDateInput(input: string): string {
+  const parsedIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(input.trim()) ? parseDateInput(input) : null;
+
+  if (parsedIsoDate) {
+    const month = String(parsedIsoDate.month).padStart(2, "0");
+    const day = String(parsedIsoDate.day).padStart(2, "0");
+
+    return `${month}/${day}/${parsedIsoDate.year}`;
+  }
+
+  const digits = input.replace(/\D/g, "").slice(0, 8);
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
 export function isLeapYear(year: number): boolean {

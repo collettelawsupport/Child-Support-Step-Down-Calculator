@@ -4,6 +4,7 @@ import {
   calculateProjectedAnnualIncome,
   calculateStepDownAmounts,
   formatDateParts,
+  formatPaystubDateInput,
   formatCurrency,
   formatPercentage,
   normalizePercentageInput,
@@ -371,8 +372,11 @@ export default function App() {
                       inputMode="numeric"
                       autoComplete="off"
                       placeholder="MM/DD/YYYY"
+                      maxLength={10}
                       value={paystubDateInput}
-                      onChange={(event) => setPaystubDateInput(event.target.value)}
+                      onChange={(event) =>
+                        setPaystubDateInput(formatPaystubDateInput(event.target.value))
+                      }
                       aria-invalid={showPaystubDateError}
                       aria-describedby={
                         showPaystubDateError ? "paystub-date-error" : undefined

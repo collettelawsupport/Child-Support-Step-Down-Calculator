@@ -3,6 +3,7 @@ import {
   calculateProjectedAnnualIncome,
   calculateStepDownAmounts,
   formatCurrency,
+  formatPaystubDateInput,
   normalizePercentageInput,
   parseDateInput,
   parseCurrencyInput
@@ -48,8 +49,22 @@ describe("calculator helpers", () => {
       month: 7,
       day: 1
     });
+    expect(parseDateInput("07012026")).toMatchObject({
+      year: 2026,
+      month: 7,
+      day: 1
+    });
     expect(parseDateInput("2026-02-31")).toBeNull();
     expect(parseDateInput("13/01/2026")).toBeNull();
+  });
+
+  it("formats paystub date entry with slashes for numeric mobile input", () => {
+    expect(formatPaystubDateInput("0")).toBe("0");
+    expect(formatPaystubDateInput("07")).toBe("07");
+    expect(formatPaystubDateInput("0701")).toBe("07/01");
+    expect(formatPaystubDateInput("07012026")).toBe("07/01/2026");
+    expect(formatPaystubDateInput("07/01/2026")).toBe("07/01/2026");
+    expect(formatPaystubDateInput("2026-07-01")).toBe("07/01/2026");
   });
 
   it("projects year-to-date income linearly through the paystub date", () => {
