@@ -27,6 +27,8 @@ export type IncomeProjectionResult = {
   daysInYear: number;
   paystubYear: number;
   paystubDate: DateParts;
+  periodStartDate: DateParts;
+  usesJobStartDate: boolean;
 };
 
 const numberPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)$/;
@@ -145,18 +147,48 @@ export function getDayOfYear(dateParts: DateParts): number {
   return Math.floor((currentDate - startOfYear) / 86_400_000) + 1;
 }
 
+export function getInclusiveDaysBetween(startDate: DateParts, endDate: DateParts): number {
+  const start = Date.UTC(startDate.year, startDate.month - 1, startDate.day);
+  const end = Date.UTC(endDate.year, endDate.month - 1, endDate.day);
+
+  return Math.floor((end - start) / 86_400_000) + 1;
+}
+
 export function calculateProjectedAnnualIncome(
   ytdIncome: number,
-  paystubDateInput: string
+  paystubDateInput: string,
+  startDateInput?: string
 ): IncomeProjectionResult | null {
   const paystubDate = parseDateInput(paystubDateInput);
+  const startDate = startDateInput ? parseDateInput(startDateInput) : null;
 
   if (!paystubDate) {
     return null;
   }
 
+  if (startDateInput && !startDate) {
+    return null;
+  }
+
+  if (
+    startDate &&
+    (startDate.year !== paystubDate.year || startDate.date.getTime() > paystubDate.date.getTime())
+  ) {
+    return null;
+  }
+
+  const periodStartDate =
+    startDate ??
+    ({
+      year: paystubDate.year,
+      month: 1,
+      day: 1,
+      date: new Date(paystubDate.year, 0, 1)
+    } satisfies DateParts);
   const daysInYear = isLeapYear(paystubDate.year) ? 366 : 365;
-  const elapsedDays = getDayOfYear(paystubDate);
+  const elapsedDays = startDate
+    ? getInclusiveDaysBetween(startDate, paystubDate)
+    : getDayOfYear(paystubDate);
   const projectedIncome = ytdIncome * (daysInYear / elapsedDays);
 
   return {
@@ -165,7 +197,9 @@ export function calculateProjectedAnnualIncome(
     elapsedDays,
     daysInYear,
     paystubYear: paystubDate.year,
-    paystubDate
+    paystubDate,
+    periodStartDate,
+    usesJobStartDate: Boolean(startDate)
   };
 }
 

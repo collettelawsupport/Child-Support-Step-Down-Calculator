@@ -3,11 +3,12 @@ import logoUrl from "./assets/collette-law-logo.png";
 import {
   calculateProjectedAnnualIncome,
   calculateStepDownAmounts,
+  formatCurrency,
   formatDateParts,
   formatPaystubDateInput,
-  formatCurrency,
   formatPercentage,
   normalizePercentageInput,
+  parseDateInput,
   parseCurrencyInput,
   type CalculationResult,
   type IncomeProjectionResult
@@ -24,8 +25,19 @@ type ValidationState = {
 type ProjectionValidationState = {
   ytdIncome: number | null;
   ytdIncomeError: string;
+  startDateError: string;
   paystubDateError: string;
   result: IncomeProjectionResult | null;
+};
+
+type ProjectionDateFieldProps = {
+  id: string;
+  name: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  showError: boolean;
+  errorMessage: string;
 };
 
 function validateInputs(amountInput: string, percentageInput: string): ValidationState {
@@ -64,10 +76,15 @@ function validateInputs(amountInput: string, percentageInput: string): Validatio
 
 function validateProjectionInputs(
   ytdIncomeInput: string,
-  paystubDateInput: string
+  paystubDateInput: string,
+  useJobStartDate: boolean,
+  startDateInput: string
 ): ProjectionValidationState {
   const ytdIncome = parseCurrencyInput(ytdIncomeInput);
+  const startDate = parseDateInput(startDateInput);
+  const paystubDate = parseDateInput(paystubDateInput);
   let ytdIncomeError = "";
+  let startDateError = "";
   let paystubDateError = "";
 
   if (!ytdIncomeInput.trim()) {
@@ -76,22 +93,45 @@ function validateProjectionInputs(
     ytdIncomeError = "Enter a valid income greater than $0.00.";
   }
 
+  if (useJobStartDate) {
+    if (!startDateInput.trim()) {
+      startDateError = "Enter the job start date.";
+    } else if (!startDate) {
+      startDateError = "Enter a valid job start date.";
+    }
+  }
+
   if (!paystubDateInput.trim()) {
-    paystubDateError = "Enter the date as of the paystub.";
+    paystubDateError = "Enter the year-to-date date.";
+  } else if (!paystubDate) {
+    paystubDateError = "Enter a valid year-to-date date.";
+  }
+
+  if (useJobStartDate && startDate && paystubDate) {
+    if (startDate.year !== paystubDate.year) {
+      startDateError = "Enter a job start date in the same year as the year-to-date date.";
+    } else if (startDate.date.getTime() > paystubDate.date.getTime()) {
+      startDateError = "Start date must be on or before the year-to-date date.";
+    }
   }
 
   const result =
-    !ytdIncomeError && !paystubDateError && ytdIncome !== null
-      ? calculateProjectedAnnualIncome(ytdIncome, paystubDateInput)
+    !ytdIncomeError &&
+    !startDateError &&
+    !paystubDateError &&
+    ytdIncome !== null &&
+    paystubDate !== null
+      ? calculateProjectedAnnualIncome(
+          ytdIncome,
+          paystubDateInput,
+          useJobStartDate ? startDateInput : undefined
+        )
       : null;
-
-  if (!paystubDateError && !result) {
-    paystubDateError = "Enter a valid paystub date.";
-  }
 
   return {
     ytdIncome,
     ytdIncomeError,
+    startDateError,
     paystubDateError,
     result
   };
@@ -119,10 +159,49 @@ function buildCopyText(
   ].join("\n");
 }
 
+function ProjectionDateField({
+  id,
+  name,
+  label,
+  value,
+  onChange,
+  showError,
+  errorMessage
+}: ProjectionDateFieldProps) {
+  const errorId = `${id}-error`;
+
+  return (
+    <div className="form-field">
+      <label htmlFor={id}>{label}</label>
+      <div className={`input-wrap ${showError ? "input-error" : ""}`}>
+        <input
+          id={id}
+          name={name}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="MM/DD/YYYY"
+          maxLength={10}
+          value={value}
+          onChange={(event) => onChange(formatPaystubDateInput(event.target.value))}
+          aria-invalid={showError}
+          aria-describedby={showError ? errorId : undefined}
+        />
+      </div>
+      {showError ? (
+        <p className="field-error" id={errorId}>
+          {errorMessage}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function App() {
   const [amountInput, setAmountInput] = useState("");
   const [percentageInput, setPercentageInput] = useState("");
   const [ytdIncomeInput, setYtdIncomeInput] = useState("");
+  const [useJobStartDate, setUseJobStartDate] = useState(false);
+  const [startDateInput, setStartDateInput] = useState("");
   const [paystubDateInput, setPaystubDateInput] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
 
@@ -131,16 +210,26 @@ export default function App() {
     [amountInput, percentageInput]
   );
   const projectionValidation = useMemo(
-    () => validateProjectionInputs(ytdIncomeInput, paystubDateInput),
-    [ytdIncomeInput, paystubDateInput]
+    () =>
+      validateProjectionInputs(
+        ytdIncomeInput,
+        paystubDateInput,
+        useJobStartDate,
+        startDateInput
+      ),
+    [ytdIncomeInput, paystubDateInput, useJobStartDate, startDateInput]
   );
 
   const hasEnteredData = amountInput.trim() || percentageInput.trim();
-  const hasEnteredProjectionData = ytdIncomeInput.trim() || paystubDateInput.trim();
+  const hasEnteredProjectionData =
+    ytdIncomeInput.trim() || paystubDateInput.trim() || startDateInput.trim() || useJobStartDate;
   const showAmountError = Boolean(hasEnteredData && validation.amountError);
   const showPercentageError = Boolean(hasEnteredData && validation.percentageError);
   const showYtdIncomeError = Boolean(
     hasEnteredProjectionData && projectionValidation.ytdIncomeError
+  );
+  const showStartDateError = Boolean(
+    hasEnteredProjectionData && projectionValidation.startDateError
   );
   const showPaystubDateError = Boolean(
     hasEnteredProjectionData && projectionValidation.paystubDateError
@@ -171,6 +260,8 @@ export default function App() {
 
   function handleClearProjection() {
     setYtdIncomeInput("");
+    setUseJobStartDate(false);
+    setStartDateInput("");
     setPaystubDateInput("");
   }
 
@@ -331,7 +422,9 @@ export default function App() {
               <h2 id="projection-heading">Year-to-date income projection</h2>
             </div>
             <p className="legal-note">
-              Assumes income is earned evenly from January 1 through the paystub date.
+              {useJobStartDate
+                ? "Assumes income is earned evenly from the job start date through the year-to-date date."
+                : "Assumes income is earned evenly from January 1 through the year-to-date date."}
             </p>
           </div>
 
@@ -363,33 +456,59 @@ export default function App() {
                   ) : null}
                 </div>
 
-                <div className="form-field">
-                  <label htmlFor="paystub-date">Date as of paystub</label>
-                  <div className={`input-wrap ${showPaystubDateError ? "input-error" : ""}`}>
-                    <input
-                      id="paystub-date"
-                      name="paystub-date"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      placeholder="MM/DD/YYYY"
-                      maxLength={10}
-                      value={paystubDateInput}
-                      onChange={(event) =>
-                        setPaystubDateInput(formatPaystubDateInput(event.target.value))
-                      }
-                      aria-invalid={showPaystubDateError}
-                      aria-describedby={
-                        showPaystubDateError ? "paystub-date-error" : undefined
-                      }
-                    />
-                  </div>
-                  {showPaystubDateError ? (
-                    <p className="field-error" id="paystub-date-error">
-                      {projectionValidation.paystubDateError}
-                    </p>
-                  ) : null}
-                </div>
+                {!useJobStartDate ? (
+                  <ProjectionDateField
+                    id="paystub-date"
+                    name="paystub-date"
+                    label="Year-to-date date"
+                    value={paystubDateInput}
+                    onChange={setPaystubDateInput}
+                    showError={showPaystubDateError}
+                    errorMessage={projectionValidation.paystubDateError}
+                  />
+                ) : null}
               </div>
+
+              <label className="checkbox-field" htmlFor="job-started-after-year-beginning">
+                <input
+                  id="job-started-after-year-beginning"
+                  name="job-started-after-year-beginning"
+                  type="checkbox"
+                  checked={useJobStartDate}
+                  onChange={(event) => {
+                    setUseJobStartDate(event.target.checked);
+
+                    if (!event.target.checked) {
+                      setStartDateInput("");
+                    }
+                  }}
+                />
+                <span>Job started after beginning of the year</span>
+              </label>
+
+              {useJobStartDate ? (
+                <div className="field-grid date-field-grid">
+                  <ProjectionDateField
+                    id="job-start-date"
+                    name="job-start-date"
+                    label="Start date"
+                    value={startDateInput}
+                    onChange={setStartDateInput}
+                    showError={showStartDateError}
+                    errorMessage={projectionValidation.startDateError}
+                  />
+
+                  <ProjectionDateField
+                    id="paystub-date"
+                    name="paystub-date"
+                    label="Year-to-date date"
+                    value={paystubDateInput}
+                    onChange={setPaystubDateInput}
+                    showError={showPaystubDateError}
+                    errorMessage={projectionValidation.paystubDateError}
+                  />
+                </div>
+              ) : null}
 
               <div className="actions">
                 <button type="button" className="secondary-button" onClick={handleClearProjection}>
@@ -416,12 +535,14 @@ export default function App() {
                     </div>
                   </dl>
                   <p className="muted">
-                    Based on {formatCurrency(projectionValidation.ytdIncome ?? 0)} through{" "}
+                    Based on {formatCurrency(projectionValidation.ytdIncome ?? 0)} from{" "}
+                    {formatDateParts(projectionValidation.result.periodStartDate)} through{" "}
                     {formatDateParts(projectionValidation.result.paystubDate)}.
                   </p>
                   <p className="projection-detail">
-                    Day {projectionValidation.result.elapsedDays} of{" "}
-                    {projectionValidation.result.daysInYear} in{" "}
+                    {projectionValidation.result.elapsedDays} day
+                    {projectionValidation.result.elapsedDays === 1 ? "" : "s"} of income annualized
+                    over {projectionValidation.result.daysInYear} days in{" "}
                     {projectionValidation.result.paystubYear}.
                   </p>
                 </>

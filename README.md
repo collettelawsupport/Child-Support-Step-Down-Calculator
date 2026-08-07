@@ -20,7 +20,7 @@ projectedAnnualIncome = ytdIncome * (daysInYear / elapsedDays)
 projectedMonthlyIncome = projectedAnnualIncome / 12
 ```
 
-The paystub date determines the calendar year, elapsed day count, and whether the year has 365 or 366 days.
+By default, elapsed days are counted from January 1 through the year-to-date date. If the job started after the beginning of the year, elapsed days are counted from the entered job start date through the year-to-date date. The year-to-date date determines the calendar year and whether the year has 365 or 366 days.
 
 ## Run Locally
 

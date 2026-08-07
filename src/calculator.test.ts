@@ -73,8 +73,25 @@ describe("calculator helpers", () => {
     expect(result).not.toBeNull();
     expect(result!.elapsedDays).toBe(182);
     expect(result!.daysInYear).toBe(365);
+    expect(result!.usesJobStartDate).toBe(false);
+    expect(result!.periodStartDate).toMatchObject({ year: 2026, month: 1, day: 1 });
     expect(result!.projectedIncome).toBeCloseTo(100274.725, 3);
     expect(result!.projectedMonthlyIncome).toBeCloseTo(8356.227, 3);
+  });
+
+  it("projects income from a later job start date", () => {
+    const result = calculateProjectedAnnualIncome(20000, "07/31/2026", "05/01/2026");
+
+    expect(result).not.toBeNull();
+    expect(result!.elapsedDays).toBe(92);
+    expect(result!.usesJobStartDate).toBe(true);
+    expect(result!.periodStartDate).toMatchObject({ year: 2026, month: 5, day: 1 });
+    expect(formatCurrency(result!.projectedIncome)).toBe("$79,347.83");
+    expect(formatCurrency(result!.projectedMonthlyIncome)).toBe("$6,612.32");
+  });
+
+  it("rejects job start dates after the year-to-date date", () => {
+    expect(calculateProjectedAnnualIncome(20000, "07/31/2026", "08/01/2026")).toBeNull();
   });
 
   it("uses leap-year day counts for income projections", () => {
