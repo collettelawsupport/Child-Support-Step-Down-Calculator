@@ -1,6 +1,6 @@
 # Child Support Step Down Calculator
 
-Child Support Step Down Calculator is a small client-side React application for Collette Law. It estimates the net income behind a current child support amount, shows support amounts at common step-down percentages, and projects annual income from year-to-date paystub income.
+Child Support Step Down Calculator is a small client-side React application for Collette Law. It estimates the net income behind a current child support amount, shows support amounts at common step-down percentages, and projects annual and monthly income from year-to-date paystub income.
 
 ## Formula
 
@@ -17,6 +17,7 @@ The year-to-date income projection is separate from the support calculator and u
 
 ```text
 projectedAnnualIncome = ytdIncome * (daysInYear / elapsedDays)
+projectedMonthlyIncome = projectedAnnualIncome / 12
 ```
 
 The paystub date determines the calendar year, elapsed day count, and whether the year has 365 or 366 days.

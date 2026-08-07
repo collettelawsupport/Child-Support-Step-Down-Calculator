@@ -74,6 +74,7 @@ describe("calculator helpers", () => {
     expect(result!.elapsedDays).toBe(182);
     expect(result!.daysInYear).toBe(365);
     expect(result!.projectedIncome).toBeCloseTo(100274.725, 3);
+    expect(result!.projectedMonthlyIncome).toBeCloseTo(8356.227, 3);
   });
 
   it("uses leap-year day counts for income projections", () => {
@@ -83,5 +84,6 @@ describe("calculator helpers", () => {
     expect(result!.elapsedDays).toBe(60);
     expect(result!.daysInYear).toBe(366);
     expect(formatCurrency(result!.projectedIncome)).toBe("$61,000.00");
+    expect(formatCurrency(result!.projectedMonthlyIncome)).toBe("$5,083.33");
   });
 });

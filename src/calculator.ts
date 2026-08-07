@@ -22,6 +22,7 @@ export type DateParts = {
 
 export type IncomeProjectionResult = {
   projectedIncome: number;
+  projectedMonthlyIncome: number;
   elapsedDays: number;
   daysInYear: number;
   paystubYear: number;
@@ -156,9 +157,11 @@ export function calculateProjectedAnnualIncome(
 
   const daysInYear = isLeapYear(paystubDate.year) ? 366 : 365;
   const elapsedDays = getDayOfYear(paystubDate);
+  const projectedIncome = ytdIncome * (daysInYear / elapsedDays);
 
   return {
-    projectedIncome: ytdIncome * (daysInYear / elapsedDays),
+    projectedIncome,
+    projectedMonthlyIncome: projectedIncome / 12,
     elapsedDays,
     daysInYear,
     paystubYear: paystubDate.year,

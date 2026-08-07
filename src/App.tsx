@@ -400,12 +400,21 @@ export default function App() {
 
             <section className="projection-output" aria-labelledby="projected-income-heading">
               <p className="section-kicker">Projected income</p>
-              <h3 id="projected-income-heading">Annualized income</h3>
+              <h3 id="projected-income-heading">Projected income</h3>
               {projectionValidation.result ? (
                 <>
-                  <p className="projection-value">
-                    {formatCurrency(projectionValidation.result.projectedIncome)}
-                  </p>
+                  <dl className="projection-metrics">
+                    <div className="projection-metric">
+                      <dt>Annualized income</dt>
+                      <dd>{formatCurrency(projectionValidation.result.projectedIncome)}</dd>
+                    </div>
+                    <div className="projection-metric">
+                      <dt>Monthly income</dt>
+                      <dd>
+                        {formatCurrency(projectionValidation.result.projectedMonthlyIncome)}
+                      </dd>
+                    </div>
+                  </dl>
                   <p className="muted">
                     Based on {formatCurrency(projectionValidation.ytdIncome ?? 0)} through{" "}
                     {formatDateParts(projectionValidation.result.paystubDate)}.

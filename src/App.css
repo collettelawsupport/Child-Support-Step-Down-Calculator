@@ -430,8 +430,29 @@ tbody em {
   line-height: 1.2;
 }
 
-.projection-value {
-  margin: 12px 0 0;
+.projection-metrics {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+}
+
+.projection-metric {
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.projection-metric dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.projection-metric dd {
+  margin: 4px 0 0;
   color: var(--navy);
   font-size: 34px;
   line-height: 1.12;
@@ -534,7 +555,7 @@ tbody em {
     font-size: 32px;
   }
 
-  .projection-value {
+  .projection-metric dd {
     font-size: 30px;
   }
 
